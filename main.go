@@ -135,6 +135,7 @@ func (d *SlackDash) readARP(handle *pcap.Handle, wg *sync.WaitGroup) {
 
 func (d *SlackDash) postMessage() {
 	params := slack.NewPostMessageParameters()
+	params.AsUser = true
 	_, _, err := d.client.PostMessage(d.channel, d.message, params)
 	if err != nil {
 		log.Printf("[ERROR] %s", err)
