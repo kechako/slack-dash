@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -23,6 +24,8 @@ var (
 	dashButtonMACAddr string
 )
 
+var arpInterval = 5 * time.Second
+
 type SlackDash struct {
 	client *slack.Client
 
@@ -34,6 +37,8 @@ type SlackDash struct {
 
 	channel string
 	message string
+
+	lastPost time.Time
 }
 
 func NewSlackDash(token, ifname string, addr net.HardwareAddr, ch, msg string) *SlackDash {
@@ -43,6 +48,7 @@ func NewSlackDash(token, ifname string, addr net.HardwareAddr, ch, msg string) *
 		dashAddr: addr,
 		channel:  ch,
 		message:  msg,
+		lastPost: time.Now(),
 	}
 }
 
@@ -124,10 +130,14 @@ func (d *SlackDash) readARP(handle *pcap.Handle, wg *sync.WaitGroup) {
 			arp := arpLayer.(*layers.ARP)
 
 			if arp.Operation == layers.ARPRequest && bytes.Equal(arp.SourceHwAddress, d.dashAddr) {
+				now := time.Now()
 				// arp request
+				if now.Sub(d.lastPost) >= arpInterval {
+					// PostMessage
+					d.postMessage()
 
-				// PostMessage
-				d.postMessage()
+					d.lastPost = now
+				}
 			}
 		}
 	}
